@@ -36,8 +36,9 @@ def _prompt(name: str) -> str:
 
 
 def _structured(schema):
-    # function calling is the most portable structured-output mode on OpenRouter
-    return get_llm().with_structured_output(schema, method="function_calling")
+    # json_schema, not function_calling: newer Claude models (e.g. Sonnet 5.5) reject the forced
+    # tool_choice that function_calling relies on
+    return get_llm().with_structured_output(schema, method="json_schema")
 
 
 # --------------------------------------------------------------------------- #
