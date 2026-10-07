@@ -134,8 +134,8 @@ def build_graph(session: ClientSession):
         return {"queries": q, "pending": pending, "round": 0}
 
     async def retrieve(state: State) -> dict:
-        n_total = len(state["queries"]["sparse"]) + len(state["queries"]["dense"])
-        per_query = max(5, config.TOP_K_CHUNKS // max(1, n_total))
+        # same depth as the first round for rewrite queries too (thesis: 100 / 10 = 10)
+        per_query = rag.per_query_k(config.TOP_K_CHUNKS, config.NUM_QUERIES)
 
         async def one(kind: str, query: str):
             alpha = config.SPARSE_ALPHA if kind == "sparse" else config.DENSE_ALPHA
@@ -145,7 +145,7 @@ def build_graph(session: ClientSession):
 
         new = dict(await asyncio.gather(*(one(k, q) for k, q in state["pending"])))
         all_results = {**state.get("results_by_query", {}), **new}
-        hits = rag.rrf_fuse(all_results, top_k=config.TOP_K_CHUNKS)
+        hits = rag.rrf_fuse(all_results)
         print(f"[retrieve] round {state['round']}: {len(new)} queries -> {len(hits)} fused chunks, "
               f"{len({h['email_id'] for h in hits})} emails")
         return {"results_by_query": new, "hits": hits, "pending": []}
@@ -180,7 +180,7 @@ def build_graph(session: ClientSession):
 
     async def enrich(state: State) -> dict:
         hit_ids: dict[int, list[str]] = {}
-        for h in state["hits"][:config.TOP_N_ENRICH]:
+        for h in state["hits"]:
             hit_ids.setdefault(int(h["email_id"]), []).append(h["chunk_id"])
 
         async def one(eid: int, chunk_ids: list[str]):

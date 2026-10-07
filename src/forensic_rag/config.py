@@ -59,11 +59,10 @@ REPORT_LINK_DAYS = 7
 
 # ---- Pipeline defaults (mirroring the thesis notebooks) ----
 NUM_QUERIES = 10
-TOP_K_CHUNKS = 100
-RRF_CONSTANT = 60
+TOP_K_CHUNKS = 100     # per method (sparse / dense), split across its queries: 100 / 10 = 10 each
+RRF_CONSTANT = 60      # RRF only orders the deduplicated chunks; every one of them is enriched
 CONTEXT_WINDOW = 1
-TOP_N_ENRICH = 50
-SPARSE_ALPHA = 0.25    # sparse/keyword queries lean on BM25
+SPARSE_ALPHA = 0.5     # sparse/keyword queries: BM25 and vectors equally (best recall/precision on H1-H3)
 DENSE_ALPHA = 0.75     # dense/sentence queries lean on vectors
 MAX_REWRITE_ROUNDS = 2
 

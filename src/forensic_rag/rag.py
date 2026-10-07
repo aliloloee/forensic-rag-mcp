@@ -71,9 +71,9 @@ def search(tenant: str, query: str, dataset: str, k: int, alpha: float) -> list[
     return store.hybrid_search(tenant, query, dataset, k=k, alpha=alpha)
 
 
-def rrf_fuse(results_by_query: dict[str, list[dict]], top_k: int = config.TOP_K_CHUNKS,
+def rrf_fuse(results_by_query: dict[str, list[dict]], top_k: int | None = None,
              k: int = config.RRF_CONSTANT) -> list[dict]:
-    """Reciprocal Rank Fusion across queries: score = sum 1 / (k + rank)."""
+    """Deduplicate chunks across queries, ordered by Reciprocal Rank Fusion: sum 1 / (k + rank)."""
     fused: dict[str, dict] = {}
     for query, hits in results_by_query.items():
         for rank, hit in enumerate(hits, 1):
@@ -86,17 +86,20 @@ def rrf_fuse(results_by_query: dict[str, list[dict]], top_k: int = config.TOP_K_
     return ranked[:top_k]
 
 
+def per_query_k(top_k: int, num_queries: int) -> int:
+    """top_k is per method, split across that method's queries (thesis: 100 / 10 = 10)."""
+    return max(1, top_k // max(1, num_queries))
+
+
 def retrieve(tenant: str, dataset: str, sparse: list[str], dense: list[str],
              top_k: int = config.TOP_K_CHUNKS) -> list[dict]:
-    """Hybrid search per query (sparse queries lean BM25, dense lean vector) + RRF."""
-    n = max(1, len(sparse) + len(dense))
-    per_query = max(5, top_k // n)
+    """Hybrid search per query (sparse queries lean BM25, dense lean vector), deduplicated, RRF-ordered."""
     results = {}
     for q in sparse:
-        results[f"sparse: {q}"] = search(tenant, q, dataset, per_query, config.SPARSE_ALPHA)
+        results[f"sparse: {q}"] = search(tenant, q, dataset, per_query_k(top_k, len(sparse)), config.SPARSE_ALPHA)
     for q in dense:
-        results[f"dense: {q}"] = search(tenant, q, dataset, per_query, config.DENSE_ALPHA)
-    return rrf_fuse(results, top_k=top_k)
+        results[f"dense: {q}"] = search(tenant, q, dataset, per_query_k(top_k, len(dense)), config.DENSE_ALPHA)
+    return rrf_fuse(results)
 
 
 # --------------------------------------------------------------------------- #
@@ -122,11 +125,10 @@ def email_context(tenant: str, dataset: str, email_id: int, chunk_idxs: list[int
     }
 
 
-def enrich(tenant: str, dataset: str, hits: list[dict], window: int = config.CONTEXT_WINDOW,
-           top_n: int = config.TOP_N_ENRICH) -> dict[int, dict]:
-    """Group the top_n hits by email (best email first) and build each email's context."""
+def enrich(tenant: str, dataset: str, hits: list[dict], window: int = config.CONTEXT_WINDOW) -> dict[int, dict]:
+    """Group all hits by email (best email first) and build each email's context."""
     by_email: dict[int, list[int]] = defaultdict(list)
-    for h in hits[:top_n]:
+    for h in hits:
         by_email[int(h["email_id"])].append(int(h["chunk_idx"]))
     return {eid: email_context(tenant, dataset, eid, idxs, window) for eid, idxs in by_email.items()}
 
