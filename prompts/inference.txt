@@ -1,0 +1,82 @@
+You are assisting with forensic evidence analysis.
+
+Definitions:
+- A forensic hypothesis: An assertion about a potential wrongdoing or misconduct that is being investigated.
+- An email candidate: An email chosen for evidence analysis and evaluating the hypothesis.
+
+Email candidate structure:
+- The email candidate is represented as chunks of text extracted from that email.
+- The chunks are separated by the delimiter <--chunk-->.
+
+
+################ Analysis Procedure ###################
+
+- Hypothesis analysis — A forensic hypothesis typically describes two parts:
+    1. Cause: one or more actions, behaviors, decisions, representations, transactions, communications, or omissions.
+    2. Effect: one or more intended, actual, or potential outcomes, effects, motivations, or consequences.
+
+- Email analysis for evidence — The email may include direct or indirect evidence regarding:
+    * The Cause.
+    * The Effect.
+    * The mechanisms, structures, processes, approvals, accounting treatments, financial effects, legal arrangements, controls, or operational activities that could connect the Cause and Effect described in the hypothesis.
+    * Evidence that supports, contradicts, explains, contextualizes, or otherwise helps evaluate the hypothesis.
+
+- Extract evidence spans exactly as they appear in the email. Do not paraphrase evidence spans.
+
+- Reason: Explain how the extracted evidence helps evaluate the hypothesis, or how it relates only to the cause, only to the effect, or to the connection between cause and effect. If there is no relevant evidence, briefly explain why the email is not useful for evaluating the hypothesis.
+
+- Strength: Assign the strength of the email’s relevance to the hypothesis as one of:
+    * low
+    * medium
+    * high
+
+Use "low" when the email is weak, vague, or only provides very minor context.
+Use "medium" when the email mentions, directly or indirectly, only a part of the hypothesis, like only the Cause, or only the Effect.
+Use "high" when the email mentions, directly or indirectly, both the Cause and the Effect. 
+
+*** Crucial point: The email does not need to use the exact words appearing in the hypothesis. Consider the semantic meaning of the email and whether it provides evidence relevant to assessing the cause, the effect, or both.
+
+
+################ Hypothesis analysis examples ###################
+
+Example 1:
+Hypothesis: "Employees discussed adjusting, restricting, or reallocating energy schedules, bids, or load volumes in ways that could affect supply availability or market prices."
+
+Cause: "Adjusting, restricting, or reallocating energy schedules, bids, or load volumes."
+Effect: "Affecting supply availability or market prices."
+
+Example 2:
+Hypothesis: "Employees described prepay transactions as loans or financing in order to keep associated debt off the balance sheet or to improve the company’s reported financial position."
+
+Cause: "Describing, treating, or considering prepays as income, loans, or financing."
+Effect: "Keeping debt related to prepays off the balance sheet or improving the company’s reported financial position."
+
+For both examples, phrases, sentences, or statements with similar semantic meaning to the cause or effect can be considered evidence.
+
+
+################ Output construction ###################
+
+Return valid JSON only.
+
+Output format:
+{{
+  "evidence_spans": ["exact quoted span extracted from the email"],
+  "reason": "brief explanation of how the evidence relates to the hypothesis",
+  "strength": "low | medium | high"
+}}
+
+If the email contains no relevant evidence, return:
+{{
+  "evidence_spans": [],
+  "reason": "brief explanation why the email is not useful for evaluating the hypothesis",
+  "strength": "low"
+}}
+
+
+Now perform the task for the following input:
+
+Hypothesis:
+{hypothesis}
+
+Email:
+{email}

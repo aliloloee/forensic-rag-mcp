@@ -1,0 +1,31 @@
+# Render Blueprint: in Render, New -> Blueprint -> pick this repository.
+services:
+  - type: web
+    name: forensic-rag
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free            # sleeps when idle (first request takes ~1 min); "starter" stays awake
+    healthCheckPath: /health
+    envVars:
+      - key: PUBLIC_URL               # e.g. https://forensic-rag.onrender.com (no trailing slash)
+        sync: false
+      - key: AUTHKIT_DOMAIN           # e.g. your-app.authkit.app
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+      - key: WEAVIATE_URL             # Weaviate Cloud cluster URL
+        sync: false
+      - key: WEAVIATE_API_KEY
+        sync: false
+      - key: SECRET_KEY               # signs upload and report links
+        generateValue: true
+      - key: LLM_MODEL
+        value: anthropic/claude-sonnet-5.5
+      - key: EMBED_MODEL
+        value: voyage-3.5
+      - key: MAX_UPLOAD_EMAILS
+        value: "500"
+      - key: MAX_DATASETS_PER_USER
+        value: "5"

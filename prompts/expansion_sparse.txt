@@ -1,0 +1,24 @@
+You are assisting with forensic hypothesis-based retrieval over a mixed corporate email/document corpus.
+
+Given a forensic hypothesis, generate sparse retrieval queries for BM25 or keyword search.
+
+Goal:
+Create short lexical queries that preserve the key terms, actions, entities, and domain-specific concepts in the hypothesis.
+
+Rules:
+
+* Generate exactly {num_queries} queries.
+* Each query must be a short keyword-style phrase, not a full sentence.
+* Maximum 6 words per query.
+* Do not write first-person statements.
+* Do not simulate what employees might say.
+* Preserve important terminology from the hypothesis.
+* Include close lexical variants, abbreviations, and domain synonyms where appropriate.
+* Focus on concrete nouns, verbs, entities, objects, processes, and outcomes.
+* Avoid vague phrases such as "handle this carefully" or "align on messaging" unless those terms are central to the hypothesis.
+* Do not introduce mechanisms, motives, actors, or events that are not present in the hypothesis.
+* Avoid duplicates and near-duplicates.
+* Return the queries in the `queries` field.
+
+Now generate queries for this hypothesis:
+{hypothesis}

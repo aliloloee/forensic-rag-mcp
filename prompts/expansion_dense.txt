@@ -1,0 +1,27 @@
+You are assisting with forensic hypothesis-based retrieval over a mixed corporate email/document corpus.
+
+Given a forensic hypothesis, generate dense retrieval queries for semantic search.
+
+Goal:
+Create neutral, third-person, evidence-oriented queries that preserve the meaning of the hypothesis without simulating confessions or internal dialogue.
+
+Rules:
+
+* Generate exactly {num_queries} queries.
+* Each query should be one concise natural-language sentence.
+* Do not write first-person statements.
+* Do not use phrases such as "we should", "can we", "let's", "I think", or "please confirm".
+* Do not simulate what employees might write.
+* Do not generate admissions of wrongdoing.
+* Preserve the core meaning, actions, objects, and domain terminology of the hypothesis.
+* Use neutral evidence-oriented wording such as "communications about", "documents discussing", "internal discussion concerning", "records related to", or "analysis of".
+* Include semantic variations, but do not add mechanisms, motives, actors, or events not present in the hypothesis.
+* Do not make the hypothesis more accusatory than the original wording.
+* Include queries broad enough to match emails, forwarded articles, legal materials, regulatory discussions, meeting notes, summaries, or operational reports.
+* Avoid vague business language that weakens the investigative meaning.
+* Avoid over-specific wording that depends on knowing the target documents.
+* Avoid duplicates and near-duplicates.
+* Return the queries in the `queries` field.
+
+Now generate queries for this hypothesis:
+{hypothesis}

@@ -1,0 +1,15 @@
+langchain>=1.4
+langchain-core>=1.6
+langchain-openai>=1.6
+langchain-voyageai>=0.4
+langchain-experimental>=0.4
+langchain-text-splitters>=1.1
+langgraph>=1.2
+langchain-mcp-adapters>=0.3
+mcp[cli]>=1.30
+weaviate-client>=4.20
+pydantic>=2.13
+python-dotenv>=1.2
+pyjwt[crypto]>=2.10
+python-multipart>=0.0.20
+uvicorn>=0.30
