@@ -315,15 +315,6 @@ signature check are faked. It runs on every push via GitHub Actions. It covers:
 
 Answer quality is measured separately against the thesis ground truth with `python -m forensic_rag.evaluate`.
 
-## Results on the thesis data
-
-`H3` (energy schedules and market prices), whole 105-email topic, one run:
-
-| | Precision | Recall | F1 |
-|---|---|---|---|
-| Retrieval (emails reaching inference) | 0.47 | 0.70 | 0.56 |
-| Evidence labelled high or medium vs annotated relevant | 0.93 | 0.70 | 0.80 |
-
 ## Data
 
 `data/enron_emails.jsonl` holds the 306 emails used in the thesis: emails from the public
