@@ -11,7 +11,8 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from starlette.testclient import TestClient
 
-from forensic_rag import rag
+from forensic_rag import mcp_server, rag
+from forensic_rag.limits import OneAtATime, SlidingWindow
 from forensic_rag.mcp_server import mcp
 
 ALICE, BOB = "token-alice", "token-bob"
@@ -28,8 +29,17 @@ def client():
 
 
 @pytest.fixture(autouse=True)
-def _fakes(fake_store, fake_tokens):
-    pass
+def _fakes(fake_store, fake_tokens, monkeypatch):
+    # fresh limiters per test, so tests don't use up each other's quota
+    monkeypatch.setattr(mcp_server, "INVESTIGATIONS", SlidingWindow(10, 86400, "investigations"))
+    monkeypatch.setattr(mcp_server, "INVESTIGATION_SLOTS", OneAtATime("an investigation"))
+    monkeypatch.setattr(mcp_server, "LLM_TOOL_CALLS", SlidingWindow(100, 3600, "analysis calls"))
+    monkeypatch.setattr(rag, "expand_queries", lambda h, n=10: {"sparse": ["shred files"], "dense": ["auditors"]})
+    monkeypatch.setattr(rag, "analyze_many", lambda h, contexts, **kw: {
+        eid: {"evidence_spans": ["shred the old prepay files"], "reason": "test", "strength": "high"}
+        for eid in contexts})
+    monkeypatch.setattr(rag, "analyze_email", lambda h, text: {
+        "evidence_spans": [], "reason": "test", "strength": "low"})
 
 
 def call(client, token, tool, **arguments):
@@ -125,11 +135,7 @@ def test_users_cannot_reach_each_others_datasets(client):
     assert err
 
 
-def test_investigate_returns_a_signed_report_link(client, monkeypatch):
-    monkeypatch.setattr(rag, "expand_queries", lambda h, n=10: {"sparse": ["shred files"], "dense": ["auditors"]})
-    monkeypatch.setattr(rag, "analyze_many", lambda h, contexts, **kw: {
-        eid: {"evidence_spans": ["shred the old prepay files"], "reason": "test", "strength": "high"}
-        for eid in contexts})
+def test_investigate_returns_a_signed_report_link(client):
     upload(client, ALICE)
 
     report, err = call(client, ALICE, "investigate", hypothesis="Staff destroyed files", dataset="mine")
@@ -143,6 +149,36 @@ def test_investigate_returns_a_signed_report_link(client, monkeypatch):
 
     message, err = call(client, BOB, "investigate", hypothesis="Staff destroyed files", dataset="mine")
     assert err and "Unknown dataset" in message
+
+
+def test_daily_investigation_limit_is_per_user(client, monkeypatch):
+    monkeypatch.setattr(mcp_server, "INVESTIGATIONS", SlidingWindow(2, 86400, "investigations"))
+    for _ in range(2):
+        assert not call(client, ALICE, "investigate", hypothesis="H1")[1]
+    message, err = call(client, ALICE, "investigate", hypothesis="H1")
+    assert err and "Limit reached: 2 investigations per 24 hours" in message
+    assert not call(client, BOB, "investigate", hypothesis="H1")[1]          # bob has his own quota
+
+    # a typo in the dataset name fails before the limit is charged
+    monkeypatch.setattr(mcp_server, "INVESTIGATIONS", SlidingWindow(1, 86400, "investigations"))
+    assert "Unknown dataset" in call(client, ALICE, "investigate", hypothesis="H1", dataset="typo")[0]
+    assert not call(client, ALICE, "investigate", hypothesis="H1")[1]
+
+
+def test_one_investigation_at_a_time(client):
+    with mcp_server.INVESTIGATION_SLOTS.slot("u_alice"):                      # alice has one running
+        message, err = call(client, ALICE, "investigate", hypothesis="H1")
+        assert err and "already have an investigation running" in message
+        assert not call(client, BOB, "investigate", hypothesis="H1")[1]
+    assert not call(client, ALICE, "investigate", hypothesis="H1")[1]
+
+
+def test_llm_tool_calls_are_limited(client, monkeypatch):
+    monkeypatch.setattr(mcp_server, "LLM_TOOL_CALLS", SlidingWindow(2, 3600, "analysis calls"))
+    assert not call(client, ALICE, "expand_queries", hypothesis="H1")[1]
+    assert not call(client, ALICE, "analyze_email", hypothesis="H1", email_id=1)[1]
+    message, err = call(client, ALICE, "analyze_email", hypothesis="H1", email_id=1)
+    assert err and "Limit reached: 2 analysis calls per 1 hour" in message
 
 
 def test_owner_can_delete(client):

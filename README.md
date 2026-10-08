@@ -160,8 +160,11 @@ Then ask, for example:
   datasets are invisible: a search on another user's dataset name fails with "Unknown dataset".
 - **Upload and report links.** These are HMAC-signed and expire after 30 minutes and 7 days
   respectively. Upload links are single-use, and both kinds of link are bound to the user's tenant.
-- **Cost limits.** At most 500 emails and 20 MB per upload, and 5 datasets per user. All are
-  configurable.
+- **Cost limits.** At most 500 emails and 20 MB per upload, and 5 datasets per user. On the tools
+  that spend LLM credit, each user may run one `investigate` at a time and 10 per 24 hours, and
+  call `analyze_email` and `expand_queries` 100 times per hour. A user who exceeds a limit gets an
+  error that says when to try again. All of these are configurable through env vars; the rate limits
+  are kept in memory and reset when the server restarts.
 - **Caveats** (demo-grade, which is the intended scope):
   - Uploaded emails are sent to Voyage AI for embedding and to the LLM provider for analysis.
   - Hosted reports and job status live on the instance's disk and in memory, so they are lost when it restarts.
@@ -178,7 +181,8 @@ signature check are faked. It runs on every push via GitHub Actions. It covers:
 - **The hosted server, over real HTTP and MCP.** Without a valid token you get a `401`, with discovery
   metadata pointing to AuthKit. Two users, alice and bob, check that one user's datasets are invisible
   to the other: listing, searching, reading, deleting and investigating all fail. Upload links are
-  single-use, and forged upload or report links are rejected.
+  single-use, and forged upload or report links are rejected. Rate limits are per user, and a
+  mistyped dataset name does not use up the quota.
 - **Signed links and tenant names:** tampering, expiry, and characters Weaviate does not allow.
 - **Upload parsing:** CSV header aliases, `.eml`, mixed `.zip`, and rejected inputs.
 - **Retrieval arithmetic:** 10 chunks per query, RRF deduplication without truncation, and every hit
@@ -216,6 +220,7 @@ src/forensic_rag/
   ingest.py           emails -> semantic chunks -> embeddings -> Weaviate
   rag.py              expand, retrieve (RRF), enrich, analyze, investigate, build_report
   auth.py             AuthKit token verification, current tenant, signed links
+  limits.py           per-user rate limits on the LLM-spending tools
   web.py              upload page, upload status, hosted report pages
   mcp_server.py       FastMCP server (stdio or Streamable HTTP + OAuth)
   agent.py            LangGraph agentic RAG as an MCP client

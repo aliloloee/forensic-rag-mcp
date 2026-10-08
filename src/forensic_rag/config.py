@@ -59,6 +59,10 @@ MAX_EMAIL_CHARS = 20_000
 UPLOAD_LINK_MINUTES = 30
 REPORT_LINK_DAYS = 7
 
+# ---- Per-user rate limits on LLM-spending tools (hosted mode only; in memory) ----
+INVESTIGATIONS_PER_DAY = int(os.getenv("INVESTIGATIONS_PER_DAY", "10"))   # plus one at a time
+LLM_TOOL_CALLS_PER_HOUR = int(os.getenv("LLM_TOOL_CALLS_PER_HOUR", "100"))  # analyze_email, expand_queries
+
 # ---- Pipeline defaults (mirroring the thesis notebooks) ----
 NUM_QUERIES = 10
 TOP_K_CHUNKS = 100     # per method (sparse / dense), split across its queries: 100 / 10 = 10 each

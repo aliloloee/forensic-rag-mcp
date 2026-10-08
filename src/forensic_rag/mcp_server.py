@@ -24,6 +24,7 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from forensic_rag import auth, config, rag, store, web
 from forensic_rag.hypotheses import HYPOTHESES, get_hypothesis, resolve
+from forensic_rag.limits import OneAtATime, SlidingWindow
 
 HTTP_MODE = "--http" in sys.argv or os.getenv("MCP_TRANSPORT") == "http"
 auth.AUTH_ENABLED = HTTP_MODE and bool(config.AUTHKIT_DOMAIN)
@@ -80,6 +81,18 @@ def _resolve_tenant(user_tenant: str, dataset: str) -> str:
 async def _tenant(dataset: str) -> str:
     # identity is read here, in the request context, never from tool arguments
     return await _in_thread(_resolve_tenant, auth.current_tenant(), dataset)
+
+
+# Per-user limits on the tools that spend LLM credit. They apply only to signed-in (hosted) users
+# and are keyed on the caller's own tenant, never the dataset's (everyone shares "public").
+INVESTIGATIONS = SlidingWindow(config.INVESTIGATIONS_PER_DAY, 24 * 3600, "investigations")
+INVESTIGATION_SLOTS = OneAtATime("an investigation")
+LLM_TOOL_CALLS = SlidingWindow(config.LLM_TOOL_CALLS_PER_HOUR, 3600, "analysis calls")
+
+
+def _charge_llm_call() -> None:
+    if auth.AUTH_ENABLED:
+        LLM_TOOL_CALLS.hit(auth.current_tenant())
 
 
 def _chunk_idxs(chunk_ids: list[str]) -> list[int]:
@@ -149,6 +162,7 @@ def list_example_hypotheses() -> list[dict]:
 async def expand_queries(hypothesis: str, num_queries: int = config.NUM_QUERIES) -> dict:
     """Generate sparse (keyword, for BM25) and dense (sentence, for semantic search) retrieval
     queries for a hypothesis (free text, or H1/H2/H3). Returns {"sparse": [...], "dense": [...]}."""
+    _charge_llm_call()
     return await _in_thread(rag.expand_queries, _text(hypothesis), num_queries)
 
 
@@ -192,6 +206,7 @@ async def analyze_email(hypothesis: str, email_id: int, chunk_ids: list[str] | N
     With chunk_ids, only those chunks (+ neighbours) are analysed; otherwise the whole email.
     Returns {"evidence_spans": [...], "reason": str, "strength": "low"|"medium"|"high"}.
     """
+    _charge_llm_call()
     if chunk_ids:
         text = (await get_email_context(email_id, chunk_ids, dataset, window))["text"]
     else:
@@ -204,9 +219,19 @@ async def investigate(hypothesis: str, ctx: Context, dataset: str = config.DEFAU
                       num_queries: int = config.NUM_QUERIES, top_k: int = config.TOP_K_CHUNKS) -> dict:
     """Run the full pipeline (expand -> retrieve -> enrich -> analyze) for a hypothesis (free text,
     or H1/H2/H3) over a dataset. Returns the high- and medium-relevance emails with evidence spans
-    and explanations, and (on the hosted server) a link to a full HTML report. Takes 1-3 minutes."""
-    tenant = await _tenant(dataset)
+    and explanations, and (on the hosted server) a link to a full HTML report. Takes 1-3 minutes.
+    On the hosted server each user can run one at a time and a limited number per day."""
+    tenant = await _tenant(dataset)            # an unknown dataset fails here, before any limit is charged
+    if not auth.AUTH_ENABLED:
+        return await _investigate(tenant, hypothesis, ctx, dataset, num_queries, top_k)
+    user = auth.current_tenant()
+    with INVESTIGATION_SLOTS.slot(user):
+        INVESTIGATIONS.hit(user)
+        return await _investigate(tenant, hypothesis, ctx, dataset, num_queries, top_k)
 
+
+async def _investigate(tenant: str, hypothesis: str, ctx: Context, dataset: str, num_queries: int,
+                       top_k: int) -> dict:
     def on_progress(fraction: float, message: str) -> None:      # called from the worker thread
         try:
             anyio.from_thread.run(functools.partial(ctx.report_progress, fraction * 100, 100, message))
