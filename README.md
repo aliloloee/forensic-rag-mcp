@@ -231,3 +231,9 @@ Dockerfile, render.yaml, docker-compose.yml (local Weaviate)
 
 - The default `LLM_MODEL` is `anthropic/claude-haiku-4.5`. It is cheap, and on H1 it followed the
   Cause/Effect rubric better than Sonnet 5.5, which rated "Cause only" emails low instead of medium.
+
+## License
+
+The code is available under the [MIT License](LICENSE). The emails in `data/` are a sample of
+the public Enron corpus. They are not covered by this license and remain subject to the corpus's
+own terms.
