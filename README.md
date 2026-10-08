@@ -1,6 +1,20 @@
 # Forensic Email RAG: an MCP connector for hypothesis-driven investigations
 
 [![tests](https://github.com/aliloloee/forensic-rag-mcp/actions/workflows/tests.yml/badge.svg)](https://github.com/aliloloee/forensic-rag-mcp/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
+![MCP](https://img.shields.io/badge/MCP-server_%2B_client-000000?logo=modelcontextprotocol&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?logo=langgraph&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-D97757?logo=claude&logoColor=white)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-6566F1?logo=openrouter&logoColor=white)
+![Weaviate](https://img.shields.io/badge/Weaviate-hybrid_search-00C29A)
+![Voyage AI](https://img.shields.io/badge/Voyage_AI-embeddings-1A1A1A)
+![WorkOS AuthKit](https://img.shields.io/badge/WorkOS_AuthKit-OAuth_2.1-6363F1)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Render](https://img.shields.io/badge/Render-46E3B7?logo=render&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-0A9EDC?logo=pytest&logoColor=white)
 
 Give it a hypothesis such as *"Employees discussed hiding trading losses from auditors"* and a
 set of emails. It returns the emails that support the hypothesis, with **verbatim evidence spans**
