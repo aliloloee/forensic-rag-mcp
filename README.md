@@ -1,5 +1,7 @@
 # Forensic Email RAG: an MCP connector for hypothesis-driven investigations
 
+[![tests](https://github.com/aliloloee/forensic-rag-mcp/actions/workflows/tests.yml/badge.svg)](https://github.com/aliloloee/forensic-rag-mcp/actions/workflows/tests.yml)
+
 Give it a hypothesis such as *"Employees discussed hiding trading losses from auditors"* and a
 set of emails. It returns the emails that support the hypothesis, with **verbatim evidence spans**
 and an **explanation** for each. It runs as an **MCP server**, so Claude can use it as a connector.
@@ -164,6 +166,26 @@ Then ask, for example:
   - Uploaded emails are sent to Voyage AI for embedding and to the LLM provider for analysis.
   - Hosted reports and job status live on the instance's disk and in memory, so they are lost when it restarts.
 
+## Tests
+
+```powershell
+pip install -e ".[dev]"
+pytest
+```
+
+The suite needs no API keys and makes no network calls. Weaviate, Voyage, OpenRouter and the WorkOS
+signature check are faked. It runs on every push via GitHub Actions. It covers:
+- **The hosted server, over real HTTP and MCP.** Without a valid token you get a `401`, with discovery
+  metadata pointing to AuthKit. Two users, alice and bob, check that one user's datasets are invisible
+  to the other: listing, searching, reading, deleting and investigating all fail. Upload links are
+  single-use, and forged upload or report links are rejected.
+- **Signed links and tenant names:** tampering, expiry, and characters Weaviate does not allow.
+- **Upload parsing:** CSV header aliases, `.eml`, mixed `.zip`, and rejected inputs.
+- **Retrieval arithmetic:** 10 chunks per query, RRF deduplication without truncation, and every hit
+  is enriched.
+
+Answer quality is measured separately against the thesis ground truth with `python -m forensic_rag.evaluate`.
+
 ## Results on the thesis data
 
 `H3` (energy schedules and market prices), whole 105-email topic, one run:
@@ -200,6 +222,8 @@ src/forensic_rag/
   report.py           HTML evidence report
   evaluate.py         P/R/F1 against the thesis ground truth
   hypotheses.py       thesis hypotheses H1-H3 + annotations
+tests/                pytest suite (all external services faked)
+.github/workflows/    CI: pytest on every push
 Dockerfile, render.yaml, docker-compose.yml (local Weaviate)
 ```
 
