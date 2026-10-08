@@ -18,6 +18,8 @@ def get_llm(temperature: float | None = None) -> ChatOpenAI:
         api_key=config.OPENROUTER_API_KEY,
         base_url=config.OPENROUTER_BASE_URL,
         temperature=config.LLM_TEMPERATURE if temperature is None else temperature,
+        # without a cap OpenRouter reserves credit for the model's full output limit (65k) per call
+        max_tokens=config.LLM_MAX_TOKENS,
         max_retries=3,
     )
 

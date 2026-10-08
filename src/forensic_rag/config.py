@@ -15,8 +15,10 @@ load_dotenv(PROJECT_DIR / ".env")
 # ---- LLM (OpenRouter, OpenAI-compatible API) ----
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-LLM_MODEL = os.getenv("LLM_MODEL", "anthropic/claude-sonnet-5.5")
+# Haiku 4.5 follows the inference rubric better than Sonnet 5.5 (H1: 9/13 vs 5/13 relevant emails found)
+LLM_MODEL = os.getenv("LLM_MODEL", "anthropic/claude-haiku-4.5")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2000"))
 
 # ---- Embeddings (Voyage AI) ----
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")

@@ -22,7 +22,7 @@ services:
       - key: SECRET_KEY               # signs upload and report links
         generateValue: true
       - key: LLM_MODEL
-        value: anthropic/claude-sonnet-5.5
+        value: anthropic/claude-haiku-4.5
       - key: EMBED_MODEL
         value: voyage-3.5
       - key: MAX_UPLOAD_EMAILS

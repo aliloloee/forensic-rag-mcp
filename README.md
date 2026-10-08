@@ -205,4 +205,5 @@ Dockerfile, render.yaml, docker-compose.yml (local Weaviate)
 
 ## Notes
 
-- `LLM_MODEL=anthropic/claude-haiku-4.5` makes the per-email inference much cheaper.
+- The default `LLM_MODEL` is `anthropic/claude-haiku-4.5`. It is cheap, and on H1 it followed the
+  Cause/Effect rubric better than Sonnet 5.5, which rated "Cause only" emails low instead of medium.
