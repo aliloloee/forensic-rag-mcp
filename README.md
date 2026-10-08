@@ -8,8 +8,8 @@ and an **explanation** for each. It runs as an **MCP server**, so Claude can use
 Users can also upload their own mailboxes.
 
 This is a simplified, deployable version of my master's thesis pipeline
-(*Hypothesis-Driven Forensic Email Analysis with Retrieval-Augmented Generation*, University of
-Bologna). The original research pipeline is in [aliloloee/forensic-analysis](https://github.com/aliloloee/forensic-analysis).
+([*Hypothesis-Driven Forensic Email Analysis with Retrieval-Augmented Generation*](https://amslaurea.unibo.it/id/eprint/39544/1/Hypothesis-Driven%20Forensic%20Email%20Analysis%20with%20Retrieval-Augmented%20Generation.pdf),
+University of Bologna). The original research pipeline is in [aliloloee/forensic-analysis](https://github.com/aliloloee/forensic-analysis).
 
 ```mermaid
 flowchart LR
@@ -46,6 +46,119 @@ flowchart LR
 | Users | just you (no login) | OAuth 2.1 through WorkOS AuthKit; each user gets a private Weaviate tenant |
 | Data | `ingest` CLI | upload page (signed single-use link from the `create_upload_link` tool) |
 | Clients | the LangGraph agent, Claude Code, Claude Desktop | claude.ai, Claude Desktop, Claude Code |
+
+---
+
+## How to use
+
+There is no public instance: you connect Claude to **your own deployment** (see
+[Deploying the hosted connector](#deploying-the-hosted-connector)). In claude.ai, open **Settings →
+Connectors → Add custom connector**, give it a name such as `Forensic RAG`, and enter
+`https://<your-service>/mcp`. Claude then opens a sign-in page. To use it locally without hosting,
+see [Local quick start](#local-quick-start).
+
+After that, you just talk to Claude. It picks the right tools itself. The screenshots below are from
+claude.ai, with the connector named `Forensic RAG`.
+
+### 1. See what you can investigate
+
+> *"What datasets can I investigate with Forensic RAG?"*
+
+Claude calls `list_datasets`. You always see the shared **`enron`** dataset (306 emails), plus any
+datasets you have uploaded. To try the thesis hypotheses, ask *"Show me the example hypotheses."*:
+**H1** is about prepay transactions disguised as loans, **H2** about destroying documents before an
+audit, and **H3** about manipulating energy schedules and prices.
+
+![Claude listing the available datasets](docs/images/01-datasets.png)
+
+### 2. Run an investigation
+
+> *"Using Forensic RAG, investigate the enron dataset for this hypothesis: employees described prepay
+> transactions as loans to keep debt off the balance sheet. Show the evidence spans and explanations."*
+
+The hypothesis can be any free-text claim of possible misconduct, or just `H1`, `H2` or `H3`.
+
+**Write it as a Cause and an Effect.** The pipeline is built around hypotheses with two parts:
+an action (the **Cause**) and its purpose or outcome (the **Effect**). It splits the hypothesis into
+these two parts, and an email's rating depends on which parts it shows. A hypothesis in this form
+gives the clearest results:
+
+| | Hypothesis |
+|---|---|
+| ✅ Cause + Effect | *Traders **withheld power from the grid** **to push up market prices**.* |
+| ✅ Cause + Effect | *Staff **deleted audit-related emails** **before the SEC investigation**.* |
+| ⚠️ Topic only | *Emails about the California energy market.* |
+| ⚠️ Effect only | *The company's reported debt was too low.* |
+
+The weaker forms still work, but the ratings are less meaningful. "High" means both parts are
+present, which a hypothesis without both parts can't really define.
+
+Claude picks the `investigate` tool and fills in its arguments. Unless you have chosen
+*Always allow* for the tool, it asks for your approval first:
+
+![Claude asking to run the investigate tool](docs/images/02-investigate.png)
+
+The run takes one to three minutes. The tool rates every email it analysed:
+
+| Strength | Meaning |
+|---|---|
+| **high** | the email shows both the action (Cause) and its purpose or outcome (Effect) |
+| **medium** | the email shows only one of the two, e.g. a prepay described as "financing" |
+| **low** | weak or no evidence. Not listed in the chat, but kept in the report |
+
+Every email comes with the **evidence spans quoted verbatim** and an explanation of how they relate
+to the hypothesis.
+
+Claude does not just repeat these ratings. It can fetch the surrounding text of any email
+(`get_email_context`), so it checks the tool's explanations against the emails and says where it
+disagrees. In this run, it rated one email "off-topic for balance sheets", and it pointed out that
+the "Corp Prepay" email shows a prepay kept *out* of the debt category, the opposite of what the
+hypothesis claims:
+
+![Claude reviewing the tool's ratings against the full emails](docs/images/03-results.png)
+
+### 3. Open the evidence report
+
+Each answer ends with a **report link**. The HTML page lists every analysed email, including
+the low ones. The evidence spans are highlighted inside the retrieved email text, and a span that
+does not appear verbatim is flagged. The link works without a second sign-in and is valid for 7 days.
+
+![The HTML evidence report with highlighted spans](docs/images/04-report.png)
+
+### 4. Investigate your own emails
+
+> *"Give me an upload link for my emails."*
+
+Claude returns a private link. It works once and expires after 30 minutes. On that page,
+name the dataset, choose your files (`.mbox`, `.eml`, `.csv`, `.txt`, or a `.zip` of them; up to 500
+emails and 20 MB), and click **Upload and index**. The page shows the indexing progress. Wait until it
+says it is done.
+
+![The upload page](docs/images/05-upload.png)
+
+Then investigate it like the Enron data:
+
+> *"Investigate my dataset 'my-mailbox': did anyone discuss backdating contracts?"*
+
+Your datasets are visible only to you. To remove one, ask *"Delete my dataset 'my-mailbox'."*
+
+### 5. Go step by step (optional)
+
+For more control, ask Claude to run the stages itself instead of the one-shot `investigate`:
+
+> *"Expand this hypothesis into search queries, search the enron dataset with them, and analyse the
+> five most promising emails one by one."*
+
+Claude then uses `expand_queries`, `search_chunks`, `get_email_context` and `analyze_email`. You can
+steer it between steps, e.g. *"Search again, but focus on the auditors."*
+
+### Good to know
+
+- **The first request can take about a minute** while the free server wakes up.
+- **Limits per user:** 1 investigation at a time and 10 per day, and 100 step-by-step analysis calls
+  per hour. When you hit one, Claude tells you when to try again.
+- **Results are evidence to review, not a verdict.** Always read the quoted spans in context. The
+  report shows the surrounding text for exactly this reason.
 
 ---
 
@@ -105,7 +218,7 @@ You need accounts with OpenRouter, Voyage AI, Weaviate Cloud, WorkOS and Render.
 1. Fork or push this repository to GitHub.
 2. In Render, choose **New → Blueprint** and pick the repository.
 3. Fill in the secret environment variables. Set `PUBLIC_URL` to the service URL, e.g.
-   `https://forensic-rag.onrender.com`.
+   `https://<your-service>.onrender.com`.
 4. Check that `https://<service>/health` returns `{"status": "ok"}`.
 
 ### 3. WorkOS AuthKit
@@ -126,9 +239,7 @@ sign-in itself.
 - **Claude Code:** `claude mcp add --transport http forensic-rag https://<service>/mcp`, then
   run `/mcp` to sign in.
 
-Then ask, for example:
-> *"Give me an upload link for my emails."* (open it, upload a `.mbox` or `.zip`, wait for indexing)
-> *"Investigate in my dataset 'my-mailbox' whether anyone discussed backdating contracts. Show the evidence spans and explanations."*
+Then follow [How to use](#how-to-use).
 
 ---
 
@@ -233,6 +344,14 @@ Dockerfile, render.yaml, docker-compose.yml (local Weaviate)
 ```
 
 ## Notes
+
+- **The hypothesis format is set by the prompts, not by the code.** The Cause/Effect structure from
+  the thesis lives in three prompts. In [`prompts/inference.txt`](prompts/inference.txt) it splits the
+  hypothesis and defines high, medium and low. In `GRADE_PROMPT` in `agent.py`, the LangGraph loop uses
+  it to check that the hits cover both parts. The `forensic_investigation` MCP prompt uses it too. The
+  query-expansion prompts do not depend on it. To support another format, for example a timeline
+  ("X happened before Y") or a list of required elements, rewrite those prompts. The output schema of
+  spans, reason and strength stays the same, so no other code has to change.
 
 - The default `LLM_MODEL` is `anthropic/claude-haiku-4.5`. It is cheap, and on H1 it followed the
   Cause/Effect rubric better than Sonnet 5.5, which rated "Cause only" emails low instead of medium.

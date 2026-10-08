@@ -7,7 +7,7 @@ services:
     plan: free            # sleeps when idle (first request takes ~1 min); "starter" stays awake
     healthCheckPath: /health
     envVars:
-      - key: PUBLIC_URL               # e.g. https://forensic-rag.onrender.com (no trailing slash)
+      - key: PUBLIC_URL               # e.g. https://<your-service>.onrender.com (no trailing slash)
         sync: false
       - key: AUTHKIT_DOMAIN           # e.g. your-app.authkit.app
         sync: false

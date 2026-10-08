@@ -43,7 +43,7 @@ LOCAL_TENANT = "local"            # the user when running without authentication
 DEFAULT_DATASET = "enron"
 
 # ---- Hosted (HTTP) mode ----
-# PUBLIC_URL: where the server is reachable, e.g. https://forensic-rag.onrender.com
+# PUBLIC_URL: where the server is reachable, e.g. https://<your-service>.onrender.com
 # AUTHKIT_DOMAIN: e.g. your-app.authkit.app. When set, every MCP request needs a WorkOS token.
 PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000").rstrip("/")
 AUTHKIT_DOMAIN = os.getenv("AUTHKIT_DOMAIN", "").removeprefix("https://").rstrip("/")
